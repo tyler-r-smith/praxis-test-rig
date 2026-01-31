@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Blocks</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+      background: #f0f0f0;
+    }
+    .color-block {
+      position: absolute;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    function randomColor() {
+      const colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+        '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+        '#BB8FCE', '#85C1E9', '#F8B500', '#FF6F61'
+      ];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    function createBlocks() {
+      const numBlocks = Math.floor(Math.random() * 10) + 5;
+
+      for (let i = 0; i < numBlocks; i++) {
+        const block = document.createElement('div');
+        block.className = 'color-block';
+
+        const size = Math.floor(Math.random() * 150) + 50;
+        const x = Math.floor(Math.random() * (window.innerWidth - size));
+        const y = Math.floor(Math.random() * (window.innerHeight - size));
+
+        block.style.width = size + 'px';
+        block.style.height = size + 'px';
+        block.style.left = x + 'px';
+        block.style.top = y + 'px';
+        block.style.backgroundColor = randomColor();
+
+        document.body.appendChild(block);
+      }
+    }
+
+    createBlocks();
+  </script>
+</body>
+</html>
