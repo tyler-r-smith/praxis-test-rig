@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Color Blocks</title>
+  <title>Click Box Game</title>
   <style>
     * {
       margin: 0;
@@ -15,56 +15,255 @@
       height: 100vh;
       overflow: hidden;
       position: relative;
-      background: #f0f0f0;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    .color-block {
+    #game-ui {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 30px;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px 30px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+    }
+    .stat {
+      text-align: center;
+      color: white;
+    }
+    .stat-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.7;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+    }
+    #score-value {
+      color: #4ECDC4;
+    }
+    #time-value {
+      color: #FF6B6B;
+    }
+    #start-screen, #game-over-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 200;
+      color: white;
+    }
+    #game-over-screen {
+      display: none;
+    }
+    h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+      background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      font-size: 18px;
+      opacity: 0.7;
+      margin-bottom: 40px;
+    }
+    #final-score {
+      font-size: 72px;
+      color: #4ECDC4;
+      margin: 20px 0;
+    }
+    button {
+      padding: 15px 50px;
+      font-size: 20px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      background: linear-gradient(45deg, #FF6B6B, #FF8E8E);
+      color: white;
+      font-weight: bold;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+    }
+    .click-box {
       position: absolute;
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
       transition: transform 0.1s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
     }
-    .color-block:hover {
-      transform: scale(1.05);
+    .click-box:hover {
+      transform: scale(1.1);
+    }
+    .click-box.clicked {
+      animation: pop 0.3s ease-out forwards;
+    }
+    @keyframes pop {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(0); opacity: 0; }
+    }
+    .bonus-box {
+      animation: pulse 0.5s ease-in-out infinite alternate;
+    }
+    @keyframes pulse {
+      from { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+      to { box-shadow: 0 0 40px rgba(255, 215, 0, 0.9); }
     }
   </style>
 </head>
 <body>
+  <div id="game-ui">
+    <div class="stat">
+      <div class="stat-label">Score</div>
+      <div class="stat-value" id="score-value">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Time</div>
+      <div class="stat-value" id="time-value">30</div>
+    </div>
+  </div>
+
+  <div id="start-screen">
+    <h1>Click Box Game</h1>
+    <p class="subtitle">Click the boxes before they disappear!</p>
+    <button id="start-btn">Start Game</button>
+  </div>
+
+  <div id="game-over-screen">
+    <h1>Game Over!</h1>
+    <p class="subtitle">Your Score</p>
+    <div id="final-score">0</div>
+    <button id="restart-btn">Play Again</button>
+  </div>
+
   <script>
+    const colors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+      '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+      '#BB8FCE', '#85C1E9', '#F8B500', '#FF6F61'
+    ];
+
+    let score = 0;
+    let timeLeft = 30;
+    let gameInterval;
+    let spawnInterval;
+    let isPlaying = false;
+
+    const scoreDisplay = document.getElementById('score-value');
+    const timeDisplay = document.getElementById('time-value');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const finalScoreDisplay = document.getElementById('final-score');
+
     function randomColor() {
-      const colors = [
-        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
-        '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
-        '#BB8FCE', '#85C1E9', '#F8B500', '#FF6F61'
-      ];
       return colors[Math.floor(Math.random() * colors.length)];
     }
 
-    function createBlocks() {
-      const numBlocks = Math.floor(Math.random() * 10) + 5;
+    function createBox() {
+      if (!isPlaying) return;
 
-      for (let i = 0; i < numBlocks; i++) {
-        const block = document.createElement('div');
-        block.className = 'color-block';
+      const box = document.createElement('div');
+      box.className = 'click-box';
 
-        const size = Math.floor(Math.random() * 150) + 50;
-        const x = Math.floor(Math.random() * (window.innerWidth - size));
-        const y = Math.floor(Math.random() * (window.innerHeight - size));
+      const isBonus = Math.random() < 0.1;
+      const size = isBonus ? 40 : Math.floor(Math.random() * 60) + 40;
+      const points = isBonus ? 5 : Math.ceil((100 - size) / 20);
 
-        block.style.width = size + 'px';
-        block.style.height = size + 'px';
-        block.style.left = x + 'px';
-        block.style.top = y + 'px';
-        block.style.backgroundColor = randomColor();
+      const maxX = window.innerWidth - size - 20;
+      const maxY = window.innerHeight - size - 100;
+      const x = Math.floor(Math.random() * maxX) + 10;
+      const y = Math.floor(Math.random() * (maxY - 80)) + 80;
 
-        block.addEventListener('click', function() {
-          this.style.backgroundColor = randomColor();
-        });
+      box.style.width = size + 'px';
+      box.style.height = size + 'px';
+      box.style.left = x + 'px';
+      box.style.top = y + 'px';
+      box.style.backgroundColor = isBonus ? '#FFD700' : randomColor();
+      box.textContent = '+' + points;
+      box.style.fontSize = (size / 3) + 'px';
 
-        document.body.appendChild(block);
+      if (isBonus) {
+        box.classList.add('bonus-box');
       }
+
+      box.addEventListener('click', function() {
+        if (this.classList.contains('clicked')) return;
+        this.classList.add('clicked');
+        score += points;
+        scoreDisplay.textContent = score;
+        setTimeout(() => this.remove(), 300);
+      });
+
+      document.body.appendChild(box);
+
+      const lifetime = isBonus ? 1500 : Math.random() * 2000 + 1500;
+      setTimeout(() => {
+        if (box.parentNode && !box.classList.contains('clicked')) {
+          box.classList.add('clicked');
+          setTimeout(() => box.remove(), 300);
+        }
+      }, lifetime);
     }
 
-    createBlocks();
+    function startGame() {
+      score = 0;
+      timeLeft = 30;
+      isPlaying = true;
+      scoreDisplay.textContent = '0';
+      timeDisplay.textContent = '30';
+      startScreen.style.display = 'none';
+      gameOverScreen.style.display = 'none';
+
+      document.querySelectorAll('.click-box').forEach(box => box.remove());
+
+      gameInterval = setInterval(() => {
+        timeLeft--;
+        timeDisplay.textContent = timeLeft;
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+
+      spawnInterval = setInterval(createBox, 400);
+      createBox();
+    }
+
+    function endGame() {
+      isPlaying = false;
+      clearInterval(gameInterval);
+      clearInterval(spawnInterval);
+
+      document.querySelectorAll('.click-box').forEach(box => box.remove());
+
+      finalScoreDisplay.textContent = score;
+      gameOverScreen.style.display = 'flex';
+    }
+
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', startGame);
   </script>
 </body>
 </html>
