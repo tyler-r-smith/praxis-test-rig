@@ -600,12 +600,20 @@
       // Speed: 1-5 (higher = faster movement)
       const speed = isMoving ? Math.floor(Math.random() * 5) + 1 : 0;
 
-      // Calculate points based on size and speed
-      // Smaller boxes = more points (base 40-90 size, so invert: smaller = higher)
-      // Faster boxes = more points
-      const sizeBonus = Math.max(1, Math.floor((100 - Math.min(width, height)) / 15));
-      const speedBonus = speed * 2;
-      let points = isBonus ? 25 : Math.max(3, sizeBonus + speedBonus);
+      // Calculate points with high variation
+      // Base: 5-15 points randomly
+      const basePoints = Math.floor(Math.random() * 11) + 5;
+      // Size bonus: Smaller boxes = more points (0-20 range)
+      const sizeBonus = Math.floor((100 - Math.min(width, height)) / 3);
+      // Speed bonus: Faster = more points (0-15 range)
+      const speedBonus = speed * 3;
+      // Shape bonus: Harder shapes get bonus points
+      const shapeBonus = (shape === 'diamond') ? 10 : (shape === 'circle') ? 5 : 0;
+      // Rare multiplier: 10% chance for 2x, 2% chance for 3x
+      const rareRoll = Math.random();
+      const rareMultiplier = rareRoll < 0.02 ? 3 : (rareRoll < 0.12 ? 2 : 1);
+      // Calculate final points (range: ~5 to 80+)
+      let points = isBonus ? 50 : Math.floor((basePoints + sizeBonus + speedBonus + shapeBonus) * rareMultiplier);
 
       const maxX = window.innerWidth - width - 20;
       const maxY = window.innerHeight - height - 100;
@@ -717,9 +725,9 @@
           box.style.height = newHeight + 'px';
           box.style.fontSize = (Math.min(newWidth, newHeight) / 3) + 'px';
 
-          // Recalculate points based on current size
-          const newSizeBonus = Math.max(1, Math.floor((100 - currentSize) / 15));
-          points = Math.max(3, newSizeBonus + speedBonus);
+          // Recalculate points based on current size (keeps base, shape, and rare from initial calc)
+          const newSizeBonus = Math.floor((100 - currentSize) / 3);
+          points = Math.floor((basePoints + newSizeBonus + speedBonus + shapeBonus) * rareMultiplier);
           updatePointsDisplay();
         }, 100);
       }
