@@ -155,13 +155,16 @@
     }
     .new-high-score {
       color: #FFD700;
-      font-size: 24px;
-      animation: glow 0.5s ease-in-out infinite alternate;
+      font-size: 36px;
+      animation: glow 0.4s ease-in-out infinite alternate;
       margin-bottom: 20px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 3px;
     }
     @keyframes glow {
-      from { text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-      to { text-shadow: 0 0 30px rgba(255, 215, 0, 1); }
+      from { text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3); }
+      to { text-shadow: 0 0 50px rgba(255, 215, 0, 1), 0 0 80px rgba(255, 215, 0, 0.6), 0 0 100px rgba(255, 215, 0, 0.3); }
     }
     .high-scores {
       margin-top: 30px;
@@ -350,17 +353,20 @@
     }
     @keyframes scoreBounce {
       0%, 100% { transform: scale(1); }
-      25% { transform: scale(1.3); }
-      50% { transform: scale(0.9); }
-      75% { transform: scale(1.15); }
+      25% { transform: scale(1.8); }
+      50% { transform: scale(1.2); }
+      75% { transform: scale(1.5); }
     }
     @keyframes highScoreEntrance {
       0% {
         transform: scale(0) rotate(-180deg);
         opacity: 0;
       }
-      50% {
-        transform: scale(1.4) rotate(10deg);
+      40% {
+        transform: scale(2.5) rotate(15deg);
+      }
+      70% {
+        transform: scale(1.8) rotate(-5deg);
       }
       100% {
         transform: scale(1) rotate(0deg);
@@ -373,8 +379,8 @@
         opacity: 1;
       }
       50% {
-        transform: scale(1.5) rotate(180deg);
-        opacity: 0.8;
+        transform: scale(2.5) rotate(180deg);
+        opacity: 0.9;
       }
       100% {
         transform: scale(0) rotate(360deg);
@@ -383,34 +389,34 @@
     }
     .confetti {
       position: fixed;
-      width: 10px;
-      height: 10px;
+      width: 20px;
+      height: 20px;
       z-index: 250;
       pointer-events: none;
     }
     .confetti.shape-square {
-      border-radius: 2px;
+      border-radius: 4px;
     }
     .confetti.shape-circle {
       border-radius: 50%;
     }
     .confetti.shape-ribbon {
-      width: 4px;
-      height: 16px;
-      border-radius: 2px;
+      width: 8px;
+      height: 32px;
+      border-radius: 4px;
     }
     .score-celebrate {
-      animation: scoreBounce 0.8s ease-out;
+      animation: scoreBounce 1.2s ease-out;
     }
     .new-high-score.celebrate {
       animation: highScoreEntrance 0.8s ease-out, glow 0.5s ease-in-out infinite alternate 0.8s;
     }
     .celebration-star {
       position: fixed;
-      font-size: 30px;
+      font-size: 60px;
       z-index: 250;
       pointer-events: none;
-      animation: starBurst 1s ease-out forwards;
+      animation: starBurst 1.2s ease-out forwards;
     }
     #theme-toggle {
       position: absolute;
@@ -842,35 +848,35 @@
       const confettiColors = ['#FF6B6B', '#4ECDC4', '#FFD700', '#FF8E8E', '#45B7D1', '#DDA0DD', '#F7DC6F'];
       const shapes = ['square', 'circle', 'ribbon'];
 
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 100; i++) {
         setTimeout(() => {
           const confetti = document.createElement('div');
           confetti.className = 'confetti shape-' + shapes[Math.floor(Math.random() * shapes.length)];
           confetti.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
           confetti.style.left = Math.random() * 100 + 'vw';
-          confetti.style.top = '-20px';
-          confetti.style.animation = 'confettiFall ' + (2 + Math.random() * 2) + 's linear forwards';
-          confetti.style.animationDelay = Math.random() * 0.5 + 's';
+          confetti.style.top = '-40px';
+          confetti.style.animation = 'confettiFall ' + (2.5 + Math.random() * 2.5) + 's linear forwards';
+          confetti.style.animationDelay = Math.random() * 0.8 + 's';
           document.body.appendChild(confetti);
 
-          setTimeout(() => confetti.remove(), 4500);
-        }, i * 30);
+          setTimeout(() => confetti.remove(), 6000);
+        }, i * 20);
       }
     }
 
     function createStars() {
-      const starEmojis = ['⭐', '✨', '🌟', '💫'];
-      for (let i = 0; i < 12; i++) {
+      const starEmojis = ['⭐', '✨', '🌟', '💫', '🎉', '🎊'];
+      for (let i = 0; i < 25; i++) {
         setTimeout(() => {
           const star = document.createElement('div');
           star.className = 'celebration-star';
           star.textContent = starEmojis[Math.floor(Math.random() * starEmojis.length)];
-          star.style.left = (20 + Math.random() * 60) + 'vw';
-          star.style.top = (20 + Math.random() * 60) + 'vh';
+          star.style.left = (10 + Math.random() * 80) + 'vw';
+          star.style.top = (10 + Math.random() * 80) + 'vh';
           document.body.appendChild(star);
 
-          setTimeout(() => star.remove(), 1000);
-        }, i * 100);
+          setTimeout(() => star.remove(), 1500);
+        }, i * 80);
       }
     }
 
@@ -880,12 +886,12 @@
 
       // Add bounce animation to score
       finalScoreDisplay.classList.add('score-celebrate');
-      setTimeout(() => finalScoreDisplay.classList.remove('score-celebrate'), 800);
+      setTimeout(() => finalScoreDisplay.classList.remove('score-celebrate'), 1500);
 
       // Add entrance animation to high score text
       const highScoreEl = document.getElementById('new-high-score');
       highScoreEl.classList.add('celebrate');
-      setTimeout(() => highScoreEl.classList.remove('celebrate'), 800);
+      setTimeout(() => highScoreEl.classList.remove('celebrate'), 1200);
     }
 
     function endGame() {
