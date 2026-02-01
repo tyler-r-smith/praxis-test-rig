@@ -162,6 +162,28 @@
       text-shadow: 0 2px 4px rgba(0,0,0,0.3);
       box-shadow: 0 5px 20px rgba(0,0,0,0.3);
     }
+    .click-box.shape-circle {
+      border-radius: 50%;
+    }
+    .click-box.shape-square {
+      border-radius: 8px;
+    }
+    .click-box.shape-tall {
+      border-radius: 16px;
+    }
+    .click-box.shape-wide {
+      border-radius: 16px;
+    }
+    .click-box.shape-diamond {
+      border-radius: 4px;
+      transform: rotate(45deg);
+    }
+    .click-box.shape-diamond:hover {
+      transform: rotate(45deg) scale(1.1);
+    }
+    .click-box.shape-diamond .box-text {
+      transform: rotate(-45deg);
+    }
     .click-box:hover {
       transform: scale(1.1);
     }
@@ -261,6 +283,8 @@
       return colors[Math.floor(Math.random() * colors.length)];
     }
 
+    const shapes = ['square', 'circle', 'tall', 'wide', 'diamond'];
+
     function createBox() {
       if (!isPlaying) return;
 
@@ -268,21 +292,54 @@
       box.className = 'click-box';
 
       const isBonus = Math.random() < 0.1;
-      const size = isBonus ? 40 : Math.floor(Math.random() * 60) + 40;
-      const points = isBonus ? 5 : Math.ceil((100 - size) / 20);
+      const shape = shapes[Math.floor(Math.random() * shapes.length)];
+      box.classList.add('shape-' + shape);
 
-      const maxX = window.innerWidth - size - 20;
-      const maxY = window.innerHeight - size - 100;
-      const x = Math.floor(Math.random() * maxX) + 10;
-      const y = Math.floor(Math.random() * (maxY - 80)) + 80;
+      let width, height;
+      if (isBonus) {
+        width = height = 40;
+      } else {
+        const baseSize = Math.floor(Math.random() * 50) + 40;
+        switch (shape) {
+          case 'tall':
+            width = baseSize;
+            height = baseSize * (1.5 + Math.random() * 0.5);
+            break;
+          case 'wide':
+            width = baseSize * (1.5 + Math.random() * 0.5);
+            height = baseSize;
+            break;
+          case 'diamond':
+            width = height = baseSize * 0.8;
+            break;
+          default:
+            width = height = baseSize;
+        }
+      }
 
-      box.style.width = size + 'px';
-      box.style.height = size + 'px';
+      const area = width * height;
+      const points = isBonus ? 5 : Math.ceil((10000 - area) / 2000) + 1;
+
+      const maxX = window.innerWidth - width - 20;
+      const maxY = window.innerHeight - height - 100;
+      const x = Math.floor(Math.random() * Math.max(maxX, 10)) + 10;
+      const y = Math.floor(Math.random() * Math.max(maxY - 80, 10)) + 80;
+
+      box.style.width = width + 'px';
+      box.style.height = height + 'px';
       box.style.left = x + 'px';
       box.style.top = y + 'px';
       box.style.backgroundColor = isBonus ? '#FFD700' : randomColor();
-      box.textContent = '+' + points;
-      box.style.fontSize = (size / 3) + 'px';
+
+      if (shape === 'diamond') {
+        const textSpan = document.createElement('span');
+        textSpan.className = 'box-text';
+        textSpan.textContent = '+' + points;
+        box.appendChild(textSpan);
+      } else {
+        box.textContent = '+' + points;
+      }
+      box.style.fontSize = (Math.min(width, height) / 3) + 'px';
 
       if (isBonus) {
         box.classList.add('bonus-box');
@@ -294,6 +351,7 @@
         score += points;
         scoreDisplay.textContent = score;
         setTimeout(() => this.remove(), 300);
+        createBox();
       });
 
       document.body.appendChild(box);
