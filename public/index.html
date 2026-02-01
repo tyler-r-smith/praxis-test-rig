@@ -440,6 +440,58 @@
     .theme-icon {
       font-size: 16px;
     }
+    /* Creature styles */
+    .creature {
+      position: absolute;
+      z-index: 50;
+      pointer-events: none;
+      font-size: 48px;
+      transition: transform 0.1s ease;
+    }
+    .creature.walking {
+      animation: creatureWalk 0.3s ease-in-out infinite;
+    }
+    .creature.carrying {
+      animation: creatureCarry 0.2s ease-in-out infinite;
+    }
+    .creature.facing-left {
+      transform: scaleX(-1);
+    }
+    .creature.facing-left.walking {
+      animation: creatureWalkFlipped 0.3s ease-in-out infinite;
+    }
+    .creature.facing-left.carrying {
+      animation: creatureCarryFlipped 0.2s ease-in-out infinite;
+    }
+    @keyframes creatureWalk {
+      0%, 100% { transform: translateY(0) rotate(-5deg); }
+      50% { transform: translateY(-8px) rotate(5deg); }
+    }
+    @keyframes creatureWalkFlipped {
+      0%, 100% { transform: scaleX(-1) translateY(0) rotate(-5deg); }
+      50% { transform: scaleX(-1) translateY(-8px) rotate(5deg); }
+    }
+    @keyframes creatureCarry {
+      0%, 100% { transform: translateY(0) rotate(-3deg) scale(1.1); }
+      50% { transform: translateY(-5px) rotate(3deg) scale(1.1); }
+    }
+    @keyframes creatureCarryFlipped {
+      0%, 100% { transform: scaleX(-1) translateY(0) rotate(-3deg) scale(1.1); }
+      50% { transform: scaleX(-1) translateY(-5px) rotate(3deg) scale(1.1); }
+    }
+    .stolen-points {
+      position: absolute;
+      font-size: 18px;
+      font-weight: bold;
+      color: #FF6B6B;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      pointer-events: none;
+      animation: stolenFloat 1s ease-out forwards;
+    }
+    @keyframes stolenFloat {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-30px); }
+    }
   </style>
 </head>
 <body>
@@ -495,8 +547,12 @@
     let gameInterval;
     let spawnInterval;
     let obstacleInterval;
+    let creatureInterval;
     let isPlaying = false;
     let highScores = loadHighScores();
+
+    const creatureEmojis = ['🐀', '🐁', '🐿️', '🦝', '🐒', '🦊'];
+    const creatures = [];
 
     function loadHighScores() {
       const stored = JSON.parse(localStorage.getItem('clickBoxHighScores')) || [];
@@ -826,6 +882,101 @@
       }, lifetime);
     }
 
+    function createCreature() {
+      if (!isPlaying) return;
+
+      const creature = document.createElement('div');
+      creature.className = 'creature walking';
+      creature.textContent = creatureEmojis[Math.floor(Math.random() * creatureEmojis.length)];
+
+      // Decide which side to enter from
+      const enterFromLeft = Math.random() < 0.5;
+      const speed = 2 + Math.random() * 3; // pixels per frame
+      const stealAmount = Math.floor(Math.random() * 10) + 5; // 5-15 points to steal
+
+      // Position creature
+      const y = Math.floor(Math.random() * (window.innerHeight - 200)) + 150;
+      let x = enterFromLeft ? -60 : window.innerWidth + 10;
+
+      creature.style.left = x + 'px';
+      creature.style.top = y + 'px';
+
+      if (!enterFromLeft) {
+        creature.classList.add('facing-left');
+      }
+
+      document.body.appendChild(creature);
+
+      const creatureData = {
+        element: creature,
+        x: x,
+        y: y,
+        speed: enterFromLeft ? speed : -speed,
+        stealAmount: stealAmount,
+        hasStolen: false,
+        enterFromLeft: enterFromLeft
+      };
+      creatures.push(creatureData);
+
+      const moveCreature = () => {
+        if (!creature.parentNode || !isPlaying) {
+          const idx = creatures.indexOf(creatureData);
+          if (idx > -1) creatures.splice(idx, 1);
+          return;
+        }
+
+        creatureData.x += creatureData.speed;
+        creature.style.left = creatureData.x + 'px';
+
+        // Check if creature has crossed the screen (steal points when reaching middle area)
+        const middleX = window.innerWidth / 2;
+        const reachedMiddle = enterFromLeft ?
+          (creatureData.x >= middleX - 100 && creatureData.x <= middleX + 100) :
+          (creatureData.x >= middleX - 100 && creatureData.x <= middleX + 100);
+
+        if (reachedMiddle && !creatureData.hasStolen) {
+          creatureData.hasStolen = true;
+          creature.classList.remove('walking');
+          creature.classList.add('carrying');
+
+          // Steal points
+          score -= creatureData.stealAmount;
+          updateScoreDisplay();
+
+          // Show stolen points indicator
+          const stolenDisplay = document.createElement('div');
+          stolenDisplay.className = 'stolen-points';
+          stolenDisplay.textContent = '-' + creatureData.stealAmount;
+          stolenDisplay.style.left = (creatureData.x + 20) + 'px';
+          stolenDisplay.style.top = (creatureData.y - 20) + 'px';
+          document.body.appendChild(stolenDisplay);
+          setTimeout(() => stolenDisplay.remove(), 1000);
+
+          // Check for game over
+          if (score <= 0) {
+            endGame();
+            return;
+          }
+        }
+
+        // Remove creature when it exits the screen
+        const exitedScreen = enterFromLeft ?
+          creatureData.x > window.innerWidth + 60 :
+          creatureData.x < -60;
+
+        if (exitedScreen) {
+          creature.remove();
+          const idx = creatures.indexOf(creatureData);
+          if (idx > -1) creatures.splice(idx, 1);
+          return;
+        }
+
+        requestAnimationFrame(moveCreature);
+      };
+
+      requestAnimationFrame(moveCreature);
+    }
+
     function startGame() {
       score = 10;
       timeLeft = 30;
@@ -836,6 +987,9 @@
       gameOverScreen.style.display = 'none';
 
       document.querySelectorAll('.click-box').forEach(box => box.remove());
+      document.querySelectorAll('.creature').forEach(c => c.remove());
+      document.querySelectorAll('.stolen-points').forEach(s => s.remove());
+      creatures.length = 0;
 
       gameInterval = setInterval(() => {
         timeLeft--;
@@ -849,6 +1003,7 @@
 
       spawnInterval = setInterval(createBox, 400);
       obstacleInterval = setInterval(createObstacle, 1200);
+      creatureInterval = setInterval(createCreature, 3000);
       createBox();
     }
 
@@ -907,8 +1062,12 @@
       clearInterval(gameInterval);
       clearInterval(spawnInterval);
       clearInterval(obstacleInterval);
+      clearInterval(creatureInterval);
 
       document.querySelectorAll('.click-box').forEach(box => box.remove());
+      document.querySelectorAll('.creature').forEach(c => c.remove());
+      document.querySelectorAll('.stolen-points').forEach(s => s.remove());
+      creatures.length = 0;
 
       const isNewHighScore = score > getHighScore();
 
