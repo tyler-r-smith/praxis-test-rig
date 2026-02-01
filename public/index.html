@@ -23,34 +23,35 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 60px;
-      background: rgba(0, 0, 0, 0.3);
+      height: 100px;
+      background: rgba(0, 0, 0, 0.4);
       backdrop-filter: blur(10px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 150;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 2px solid rgba(255, 255, 255, 0.15);
     }
     #header h2 {
-      font-size: 24px;
+      font-size: 42px;
       font-weight: bold;
       background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      letter-spacing: 2px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
     }
     #header-score {
       position: absolute;
-      right: 20px;
+      right: 30px;
       color: #4ECDC4;
-      font-size: 18px;
+      font-size: 24px;
       font-weight: bold;
     }
     #game-ui {
       position: fixed;
-      top: 80px;
+      top: 120px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -541,7 +542,7 @@
       const maxX = window.innerWidth - width - 20;
       const maxY = window.innerHeight - height - 100;
       let x = Math.floor(Math.random() * Math.max(maxX, 10)) + 10;
-      let y = Math.floor(Math.random() * Math.max(maxY - 80, 10)) + 80;
+      let y = Math.floor(Math.random() * Math.max(maxY - 120, 10)) + 120;
 
       box.style.width = width + 'px';
       box.style.height = height + 'px';
@@ -598,9 +599,9 @@
             dx = -dx;
             x = Math.max(10, Math.min(x, window.innerWidth - currentWidth - 20));
           }
-          if (y <= 80 || y >= window.innerHeight - currentHeight - 100) {
+          if (y <= 120 || y >= window.innerHeight - currentHeight - 100) {
             dy = -dy;
-            y = Math.max(80, Math.min(y, window.innerHeight - currentHeight - 100));
+            y = Math.max(120, Math.min(y, window.innerHeight - currentHeight - 100));
           }
 
           box.style.left = x + 'px';
@@ -710,7 +711,7 @@
       const maxX = window.innerWidth - width - 20;
       const maxY = window.innerHeight - height - 100;
       const x = Math.floor(Math.random() * Math.max(maxX, 10)) + 10;
-      const y = Math.floor(Math.random() * Math.max(maxY - 80, 10)) + 80;
+      const y = Math.floor(Math.random() * Math.max(maxY - 120, 10)) + 120;
 
       box.style.width = width + 'px';
       box.style.height = height + 'px';
