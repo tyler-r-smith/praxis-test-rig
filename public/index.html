@@ -86,6 +86,54 @@
       color: #4ECDC4;
       margin: 20px 0;
     }
+    .new-high-score {
+      color: #FFD700;
+      font-size: 24px;
+      animation: glow 0.5s ease-in-out infinite alternate;
+      margin-bottom: 20px;
+    }
+    @keyframes glow {
+      from { text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+      to { text-shadow: 0 0 30px rgba(255, 215, 0, 1); }
+    }
+    .high-scores {
+      margin-top: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px 40px;
+      border-radius: 15px;
+    }
+    .high-scores h3 {
+      color: #FFD700;
+      margin-bottom: 15px;
+    }
+    .high-scores ol {
+      list-style: none;
+      padding: 0;
+    }
+    .high-scores li {
+      padding: 8px 0;
+      font-size: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .high-scores li:last-child {
+      border-bottom: none;
+    }
+    .high-scores li.current {
+      color: #4ECDC4;
+      font-weight: bold;
+    }
+    .high-scores-animate li {
+      animation: slideIn 0.3s ease-out backwards;
+    }
+    .high-scores-animate li:nth-child(1) { animation-delay: 0.1s; }
+    .high-scores-animate li:nth-child(2) { animation-delay: 0.2s; }
+    .high-scores-animate li:nth-child(3) { animation-delay: 0.3s; }
+    .high-scores-animate li:nth-child(4) { animation-delay: 0.4s; }
+    .high-scores-animate li:nth-child(5) { animation-delay: 0.5s; }
+    @keyframes slideIn {
+      from { transform: translateX(-20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
     button {
       padding: 15px 50px;
       font-size: 20px;
@@ -150,13 +198,16 @@
     <h1>Click Box Game</h1>
     <p class="subtitle">Click the boxes before they disappear!</p>
     <button id="start-btn">Start Game</button>
+    <div id="start-high-scores" class="high-scores" style="display: none;"></div>
   </div>
 
   <div id="game-over-screen">
     <h1>Game Over!</h1>
     <p class="subtitle">Your Score</p>
     <div id="final-score">0</div>
+    <div id="new-high-score" class="new-high-score" style="display: none;">New High Score!</div>
     <button id="restart-btn">Play Again</button>
+    <div id="end-high-scores" class="high-scores high-scores-animate"></div>
   </div>
 
   <script>
@@ -171,6 +222,34 @@
     let gameInterval;
     let spawnInterval;
     let isPlaying = false;
+    let highScores = JSON.parse(localStorage.getItem('clickBoxHighScores')) || [];
+
+    function getHighScore() {
+      return highScores.length > 0 ? highScores[0] : 0;
+    }
+
+    function updateHighScores(newScore) {
+      highScores.push(newScore);
+      highScores.sort((a, b) => b - a);
+      highScores = highScores.slice(0, 5);
+      localStorage.setItem('clickBoxHighScores', JSON.stringify(highScores));
+    }
+
+    function renderHighScores(containerId, currentScore = null) {
+      const container = document.getElementById(containerId);
+      if (highScores.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      container.style.display = 'block';
+      let html = '<h3>High Scores</h3><ol>';
+      highScores.forEach((s, i) => {
+        const isCurrent = currentScore !== null && s === currentScore;
+        html += '<li class="' + (isCurrent ? 'current' : '') + '">#' + (i + 1) + ': ' + s + ' points</li>';
+      });
+      html += '</ol>';
+      container.innerHTML = html;
+    }
 
     const scoreDisplay = document.getElementById('score-value');
     const timeDisplay = document.getElementById('time-value');
@@ -258,12 +337,20 @@
 
       document.querySelectorAll('.click-box').forEach(box => box.remove());
 
+      const isNewHighScore = score > getHighScore();
+      updateHighScores(score);
+
       finalScoreDisplay.textContent = score;
+      document.getElementById('new-high-score').style.display = isNewHighScore ? 'block' : 'none';
+      renderHighScores('end-high-scores', score);
       gameOverScreen.style.display = 'flex';
     }
 
     document.getElementById('start-btn').addEventListener('click', startGame);
     document.getElementById('restart-btn').addEventListener('click', startGame);
+
+    // Initialize high scores on start screen
+    renderHighScores('start-high-scores');
   </script>
 </body>
 </html>
