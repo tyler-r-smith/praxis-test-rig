@@ -41,6 +41,13 @@
       background-clip: text;
       letter-spacing: 2px;
     }
+    #header-score {
+      position: absolute;
+      right: 20px;
+      color: #4ECDC4;
+      font-size: 18px;
+      font-weight: bold;
+    }
     #game-ui {
       position: fixed;
       top: 80px;
@@ -230,6 +237,7 @@
 <body>
   <header id="header">
     <h2>CLICK BOX</h2>
+    <div id="header-score">Score: <span id="header-score-value">10</span></div>
   </header>
 
   <div id="game-ui">
@@ -301,10 +309,16 @@
     }
 
     const scoreDisplay = document.getElementById('score-value');
+    const headerScoreDisplay = document.getElementById('header-score-value');
     const timeDisplay = document.getElementById('time-value');
     const startScreen = document.getElementById('start-screen');
     const gameOverScreen = document.getElementById('game-over-screen');
     const finalScoreDisplay = document.getElementById('final-score');
+
+    function updateScoreDisplay() {
+      scoreDisplay.textContent = score;
+      headerScoreDisplay.textContent = score;
+    }
 
     function randomColor() {
       return colors[Math.floor(Math.random() * colors.length)];
@@ -374,8 +388,8 @@
       box.addEventListener('click', function() {
         if (this.classList.contains('clicked')) return;
         this.classList.add('clicked');
-        score += points;
-        scoreDisplay.textContent = score;
+        score += 5;
+        updateScoreDisplay();
         setTimeout(() => this.remove(), 300);
         createBox();
       });
@@ -395,7 +409,7 @@
       score = 10;
       timeLeft = 30;
       isPlaying = true;
-      scoreDisplay.textContent = '10';
+      updateScoreDisplay();
       timeDisplay.textContent = '30';
       startScreen.style.display = 'none';
       gameOverScreen.style.display = 'none';
@@ -404,9 +418,9 @@
 
       gameInterval = setInterval(() => {
         timeLeft--;
-        timeDisplay.textContent = timeLeft;
         score--;
-        scoreDisplay.textContent = score;
+        timeDisplay.textContent = timeLeft;
+        updateScoreDisplay();
         if (timeLeft <= 0) {
           endGame();
         }
