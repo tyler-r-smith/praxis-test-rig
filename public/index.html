@@ -504,6 +504,34 @@
       0% { opacity: 1; transform: translateY(0); }
       100% { opacity: 0; transform: translateY(-30px); }
     }
+    /* Chicken styles - floats above everything */
+    .chicken {
+      position: fixed;
+      z-index: 300;
+      font-size: 64px;
+      cursor: not-allowed;
+      pointer-events: auto;
+      user-select: none;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+      transition: transform 0.1s ease;
+    }
+    .chicken:hover {
+      transform: scale(1.1);
+    }
+    .chicken.floating {
+      animation: chickenFloat 2s ease-in-out infinite;
+    }
+    @keyframes chickenFloat {
+      0%, 100% { transform: translateY(0) rotate(-3deg); }
+      50% { transform: translateY(-15px) rotate(3deg); }
+    }
+    .chicken.blocking {
+      animation: chickenBlock 0.5s ease-in-out infinite;
+    }
+    @keyframes chickenBlock {
+      0%, 100% { transform: scale(1) rotate(-5deg); }
+      50% { transform: scale(1.15) rotate(5deg); }
+    }
   </style>
 </head>
 <body>
@@ -1194,6 +1222,95 @@
     });
 
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+    // Chicken that floats above everything and blocks buttons
+    const chicken = document.createElement('div');
+    chicken.className = 'chicken floating';
+    chicken.textContent = '🐔';
+    chicken.style.left = '50%';
+    chicken.style.top = '50%';
+    document.body.appendChild(chicken);
+
+    let chickenX = window.innerWidth / 2;
+    let chickenY = window.innerHeight / 2;
+    let targetButton = null;
+    let chickenMode = 'wander'; // 'wander' or 'block'
+
+    function getButtons() {
+      return [
+        document.getElementById('start-btn'),
+        document.getElementById('restart-btn'),
+        document.getElementById('theme-toggle')
+      ].filter(btn => btn && btn.offsetParent !== null);
+    }
+
+    function getButtonCenter(btn) {
+      const rect = btn.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    }
+
+    function moveChicken() {
+      const buttons = getButtons();
+
+      // Every few seconds, pick a new target button if visible
+      if (Math.random() < 0.02 && buttons.length > 0) {
+        targetButton = buttons[Math.floor(Math.random() * buttons.length)];
+        chickenMode = 'block';
+        chicken.classList.remove('floating');
+        chicken.classList.add('blocking');
+      }
+
+      // If in block mode and have a target, move toward the button
+      if (chickenMode === 'block' && targetButton && targetButton.offsetParent !== null) {
+        const target = getButtonCenter(targetButton);
+        const dx = target.x - chickenX;
+        const dy = target.y - chickenY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 5) {
+          // Move toward button
+          const speed = 4;
+          chickenX += (dx / dist) * speed;
+          chickenY += (dy / dist) * speed;
+        } else {
+          // Arrived at button - stay and block
+          chickenX = target.x;
+          chickenY = target.y;
+        }
+
+        // After blocking for a while, go back to wandering
+        if (Math.random() < 0.005) {
+          chickenMode = 'wander';
+          targetButton = null;
+          chicken.classList.remove('blocking');
+          chicken.classList.add('floating');
+        }
+      } else {
+        // Wander mode - float around randomly
+        chickenMode = 'wander';
+        chicken.classList.remove('blocking');
+        chicken.classList.add('floating');
+
+        chickenX += (Math.random() - 0.5) * 3;
+        chickenY += (Math.random() - 0.5) * 3;
+
+        // Keep within bounds
+        chickenX = Math.max(50, Math.min(window.innerWidth - 50, chickenX));
+        chickenY = Math.max(50, Math.min(window.innerHeight - 50, chickenY));
+      }
+
+      chicken.style.left = chickenX + 'px';
+      chicken.style.top = chickenY + 'px';
+      chicken.style.transform = 'translate(-50%, -50%)';
+
+      requestAnimationFrame(moveChicken);
+    }
+
+    // Start the chicken movement
+    moveChicken();
   </script>
 </body>
 </html>
