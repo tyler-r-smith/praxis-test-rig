@@ -932,7 +932,6 @@
       // Decide which side to enter from
       const enterFromLeft = Math.random() < 0.5;
       const speed = 2 + Math.random() * 3; // pixels per frame
-      const stealAmount = Math.floor(Math.random() * 10) + 5; // 5-15 points to steal
 
       // Position creature
       const y = Math.floor(Math.random() * (window.innerHeight - 200)) + 150;
@@ -980,12 +979,34 @@
         element: creature,
         x: x,
         y: y,
-        speed: enterFromLeft ? speed : -speed,
-        stealAmount: stealAmount,
+        speed: speed,
+        enterFromLeft: enterFromLeft,
+        targetBox: null,
+        carriedBox: null,
         hasStolen: false,
-        enterFromLeft: enterFromLeft
+        returning: false
       };
       creatures.push(creatureData);
+
+      // Find nearest non-obstacle box
+      function findNearestBox() {
+        const boxes = document.querySelectorAll('.click-box:not(.obstacle-box):not(.clicked)');
+        let nearest = null;
+        let nearestDist = Infinity;
+
+        boxes.forEach(box => {
+          const boxX = parseFloat(box.style.left) + parseFloat(box.style.width) / 2;
+          const boxY = parseFloat(box.style.top) + parseFloat(box.style.height) / 2;
+          const dist = Math.sqrt((boxX - creatureData.x) ** 2 + (boxY - creatureData.y) ** 2);
+
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearest = box;
+          }
+        });
+
+        return nearest;
+      }
 
       const moveCreature = () => {
         if (!creature.parentNode || !isPlaying || creature.classList.contains('clicked')) {
@@ -994,28 +1015,126 @@
           return;
         }
 
-        creatureData.x += creatureData.speed;
-        creature.style.left = creatureData.x + 'px';
+        // If returning with stolen box, head to exit
+        if (creatureData.returning) {
+          const exitX = creatureData.enterFromLeft ? -80 : window.innerWidth + 80;
+          const dx = exitX - creatureData.x;
+          const moveX = Math.sign(dx) * Math.min(Math.abs(dx), creatureData.speed);
 
-        // Check if creature has crossed the screen (steal points when reaching middle area)
-        const middleX = window.innerWidth / 2;
-        const reachedMiddle = enterFromLeft ?
-          (creatureData.x >= middleX - 100 && creatureData.x <= middleX + 100) :
-          (creatureData.x >= middleX - 100 && creatureData.x <= middleX + 100);
+          creatureData.x += moveX;
+          creature.style.left = creatureData.x + 'px';
 
-        if (reachedMiddle && !creatureData.hasStolen) {
-          creatureData.hasStolen = true;
+          // Update facing direction
+          if (moveX < 0 && !creature.classList.contains('facing-left')) {
+            creature.classList.add('facing-left');
+          } else if (moveX > 0 && creature.classList.contains('facing-left')) {
+            creature.classList.remove('facing-left');
+          }
+
+          // Move carried box with creature
+          if (creatureData.carriedBox && creatureData.carriedBox.parentNode) {
+            creatureData.carriedBox.style.left = (creatureData.x - 10) + 'px';
+            creatureData.carriedBox.style.top = (creatureData.y - 30) + 'px';
+          }
+
+          // Check if exited
+          const exited = creatureData.enterFromLeft ?
+            creatureData.x < -60 :
+            creatureData.x > window.innerWidth + 60;
+
+          if (exited) {
+            // Remove carried box
+            if (creatureData.carriedBox && creatureData.carriedBox.parentNode) {
+              creatureData.carriedBox.remove();
+            }
+            creature.remove();
+            const idx = creatures.indexOf(creatureData);
+            if (idx > -1) creatures.splice(idx, 1);
+            return;
+          }
+
+          requestAnimationFrame(moveCreature);
+          return;
+        }
+
+        // Find a target box if we don't have one
+        if (!creatureData.targetBox || !creatureData.targetBox.parentNode || creatureData.targetBox.classList.contains('clicked')) {
+          creatureData.targetBox = findNearestBox();
+        }
+
+        // If no boxes available, just walk across and exit
+        if (!creatureData.targetBox) {
+          const exitX = creatureData.enterFromLeft ? window.innerWidth + 80 : -80;
+          const dx = exitX - creatureData.x;
+          const moveX = Math.sign(dx) * Math.min(Math.abs(dx), creatureData.speed);
+
+          creatureData.x += moveX;
+          creature.style.left = creatureData.x + 'px';
+
+          // Update facing direction
+          if (moveX < 0 && !creature.classList.contains('facing-left')) {
+            creature.classList.add('facing-left');
+          } else if (moveX > 0 && creature.classList.contains('facing-left')) {
+            creature.classList.remove('facing-left');
+          }
+
+          const exited = creatureData.enterFromLeft ?
+            creatureData.x > window.innerWidth + 60 :
+            creatureData.x < -60;
+
+          if (exited) {
+            creature.remove();
+            const idx = creatures.indexOf(creatureData);
+            if (idx > -1) creatures.splice(idx, 1);
+            return;
+          }
+
+          requestAnimationFrame(moveCreature);
+          return;
+        }
+
+        // Move toward target box
+        const box = creatureData.targetBox;
+        const boxX = parseFloat(box.style.left) + parseFloat(box.style.width) / 2;
+        const boxY = parseFloat(box.style.top) + parseFloat(box.style.height) / 2;
+
+        const dx = boxX - creatureData.x;
+        const dy = boxY - creatureData.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Check if we reached the box
+        if (dist < 40) {
+          // Steal the box!
           creature.classList.remove('walking');
           creature.classList.add('carrying');
+          creatureData.hasStolen = true;
+          creatureData.returning = true;
 
-          // Steal points
-          score -= creatureData.stealAmount;
+          // Get box point value
+          const boxText = box.querySelector('.box-text')?.textContent || box.textContent;
+          const points = parseInt(boxText.replace('+', '')) || 10;
+
+          // Mark box as clicked so it can't be clicked
+          box.classList.add('clicked');
+
+          // Shrink the box and attach to creature
+          box.style.transition = 'all 0.2s ease';
+          box.style.width = '25px';
+          box.style.height = '25px';
+          box.style.fontSize = '8px';
+          box.style.left = (creatureData.x - 10) + 'px';
+          box.style.top = (creatureData.y - 30) + 'px';
+          box.style.zIndex = '51';
+          creatureData.carriedBox = box;
+
+          // Deduct points from score
+          score -= points;
           updateScoreDisplay();
 
           // Show stolen points indicator
           const stolenDisplay = document.createElement('div');
           stolenDisplay.className = 'stolen-points';
-          stolenDisplay.textContent = '-' + creatureData.stealAmount;
+          stolenDisplay.textContent = '-' + points;
           stolenDisplay.style.left = (creatureData.x + 20) + 'px';
           stolenDisplay.style.top = (creatureData.y - 20) + 'px';
           document.body.appendChild(stolenDisplay);
@@ -1026,18 +1145,26 @@
             endGame();
             return;
           }
+
+          requestAnimationFrame(moveCreature);
+          return;
         }
 
-        // Remove creature when it exits the screen
-        const exitedScreen = enterFromLeft ?
-          creatureData.x > window.innerWidth + 60 :
-          creatureData.x < -60;
+        // Move toward box
+        const moveX = (dx / dist) * creatureData.speed;
+        const moveY = (dy / dist) * creatureData.speed;
 
-        if (exitedScreen) {
-          creature.remove();
-          const idx = creatures.indexOf(creatureData);
-          if (idx > -1) creatures.splice(idx, 1);
-          return;
+        creatureData.x += moveX;
+        creatureData.y += moveY;
+
+        creature.style.left = creatureData.x + 'px';
+        creature.style.top = creatureData.y + 'px';
+
+        // Update facing direction based on movement
+        if (moveX < 0 && !creature.classList.contains('facing-left')) {
+          creature.classList.add('facing-left');
+        } else if (moveX > 0 && creature.classList.contains('facing-left')) {
+          creature.classList.remove('facing-left');
         }
 
         requestAnimationFrame(moveCreature);
