@@ -258,6 +258,12 @@
     .click-box:hover {
       transform: scale(1.1);
     }
+    .click-box.moving {
+      transition: left 0.1s linear, top 0.1s linear, width 0.3s ease, height 0.3s ease, font-size 0.3s ease;
+    }
+    .click-box.moving:hover {
+      transform: scale(1.1);
+    }
     .click-box.clicked {
       animation: pop 0.3s ease-out forwards;
     }
@@ -518,21 +524,43 @@
         }
       }
 
-      // Calculate points inversely proportional to box area
-      // Smaller boxes = more points, larger boxes = fewer points
-      const area = width * height;
-      const points = Math.max(1, Math.round(15000 / area));
+      // Determine if this box moves and/or changes size
+      const isMoving = !isBonus && Math.random() < 0.4;
+      const isResizing = !isBonus && Math.random() < 0.3;
+
+      // Speed: 1-5 (higher = faster movement)
+      const speed = isMoving ? Math.floor(Math.random() * 5) + 1 : 0;
+
+      // Calculate points based on size and speed
+      // Smaller boxes = more points (base 40-90 size, so invert: smaller = higher)
+      // Faster boxes = more points
+      const sizeBonus = Math.max(1, Math.floor((100 - Math.min(width, height)) / 15));
+      const speedBonus = speed * 2;
+      let points = isBonus ? 25 : Math.max(3, sizeBonus + speedBonus);
 
       const maxX = window.innerWidth - width - 20;
       const maxY = window.innerHeight - height - 100;
-      const x = Math.floor(Math.random() * Math.max(maxX, 10)) + 10;
-      const y = Math.floor(Math.random() * Math.max(maxY - 80, 10)) + 80;
+      let x = Math.floor(Math.random() * Math.max(maxX, 10)) + 10;
+      let y = Math.floor(Math.random() * Math.max(maxY - 80, 10)) + 80;
 
       box.style.width = width + 'px';
       box.style.height = height + 'px';
       box.style.left = x + 'px';
       box.style.top = y + 'px';
       box.style.backgroundColor = isBonus ? '#FFD700' : randomColor();
+
+      if (isMoving) {
+        box.classList.add('moving');
+      }
+
+      const updatePointsDisplay = () => {
+        if (shape === 'diamond') {
+          const textSpan = box.querySelector('.box-text');
+          if (textSpan) textSpan.textContent = '+' + points;
+        } else {
+          box.textContent = '+' + points;
+        }
+      };
 
       if (shape === 'diamond') {
         const textSpan = document.createElement('span');
@@ -548,13 +576,91 @@
         box.classList.add('bonus-box');
       }
 
-      // Store points on the element for the click handler
-      box.dataset.points = points;
+      // Movement logic
+      let moveInterval = null;
+      let dx = (Math.random() - 0.5) * speed * 4;
+      let dy = (Math.random() - 0.5) * speed * 4;
+
+      if (isMoving) {
+        moveInterval = setInterval(() => {
+          if (!box.parentNode || box.classList.contains('clicked')) {
+            clearInterval(moveInterval);
+            return;
+          }
+
+          x += dx;
+          y += dy;
+
+          // Bounce off walls
+          const currentWidth = parseFloat(box.style.width);
+          const currentHeight = parseFloat(box.style.height);
+          if (x <= 10 || x >= window.innerWidth - currentWidth - 20) {
+            dx = -dx;
+            x = Math.max(10, Math.min(x, window.innerWidth - currentWidth - 20));
+          }
+          if (y <= 80 || y >= window.innerHeight - currentHeight - 100) {
+            dy = -dy;
+            y = Math.max(80, Math.min(y, window.innerHeight - currentHeight - 100));
+          }
+
+          box.style.left = x + 'px';
+          box.style.top = y + 'px';
+        }, 50);
+      }
+
+      // Size changing logic
+      let resizeInterval = null;
+      let currentSize = Math.min(width, height);
+      let growing = Math.random() < 0.5;
+      const minSize = 30;
+      const maxSize = 100;
+
+      if (isResizing) {
+        resizeInterval = setInterval(() => {
+          if (!box.parentNode || box.classList.contains('clicked')) {
+            clearInterval(resizeInterval);
+            return;
+          }
+
+          // Change size
+          if (growing) {
+            currentSize += 2;
+            if (currentSize >= maxSize) growing = false;
+          } else {
+            currentSize -= 2;
+            if (currentSize <= minSize) growing = true;
+          }
+
+          // Update dimensions based on shape
+          let newWidth, newHeight;
+          if (shape === 'tall') {
+            newWidth = currentSize;
+            newHeight = currentSize * 1.75;
+          } else if (shape === 'wide') {
+            newWidth = currentSize * 1.75;
+            newHeight = currentSize;
+          } else {
+            newWidth = currentSize;
+            newHeight = currentSize;
+          }
+
+          box.style.width = newWidth + 'px';
+          box.style.height = newHeight + 'px';
+          box.style.fontSize = (Math.min(newWidth, newHeight) / 3) + 'px';
+
+          // Recalculate points based on current size
+          const newSizeBonus = Math.max(1, Math.floor((100 - currentSize) / 15));
+          points = Math.max(3, newSizeBonus + speedBonus);
+          updatePointsDisplay();
+        }, 100);
+      }
 
       box.addEventListener('click', function() {
         if (this.classList.contains('clicked')) return;
         this.classList.add('clicked');
-        score += parseInt(this.dataset.points);
+        if (moveInterval) clearInterval(moveInterval);
+        if (resizeInterval) clearInterval(resizeInterval);
+        score += points;
         updateScoreDisplay();
         setTimeout(() => this.remove(), 300);
         createBox();
