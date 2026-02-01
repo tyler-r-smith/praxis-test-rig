@@ -444,9 +444,21 @@
     .creature {
       position: absolute;
       z-index: 50;
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: pointer;
       font-size: 48px;
       transition: transform 0.1s ease;
+    }
+    .creature:hover {
+      transform: scale(1.2);
+    }
+    .creature.clicked {
+      animation: creatureExplode 0.3s ease-out forwards;
+    }
+    @keyframes creatureExplode {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.5); }
+      100% { transform: scale(0); opacity: 0; }
     }
     .creature.walking {
       animation: creatureWalk 0.3s ease-in-out infinite;
@@ -905,6 +917,35 @@
         creature.classList.add('facing-left');
       }
 
+      // Click handler - creature acts as bomb, subtracts 1 point
+      creature.addEventListener('click', function() {
+        if (this.classList.contains('clicked')) return;
+        this.classList.add('clicked');
+        score -= 1;
+        updateScoreDisplay();
+
+        // Show -1 indicator
+        const pointsDisplay = document.createElement('div');
+        pointsDisplay.className = 'stolen-points';
+        pointsDisplay.textContent = '-1';
+        pointsDisplay.style.left = (parseFloat(this.style.left) + 20) + 'px';
+        pointsDisplay.style.top = (parseFloat(this.style.top) - 20) + 'px';
+        document.body.appendChild(pointsDisplay);
+        setTimeout(() => pointsDisplay.remove(), 1000);
+
+        // Check for game over
+        if (score <= 0) {
+          endGame();
+        }
+
+        // Remove creature after animation
+        setTimeout(() => {
+          this.remove();
+          const idx = creatures.findIndex(c => c.element === this);
+          if (idx > -1) creatures.splice(idx, 1);
+        }, 300);
+      });
+
       document.body.appendChild(creature);
 
       const creatureData = {
@@ -919,7 +960,7 @@
       creatures.push(creatureData);
 
       const moveCreature = () => {
-        if (!creature.parentNode || !isPlaying) {
+        if (!creature.parentNode || !isPlaying || creature.classList.contains('clicked')) {
           const idx = creatures.indexOf(creatureData);
           if (idx > -1) creatures.splice(idx, 1);
           return;
