@@ -509,7 +509,7 @@
       position: fixed;
       z-index: 300;
       font-size: 64px;
-      cursor: not-allowed;
+      cursor: pointer;
       pointer-events: auto;
       user-select: none;
       filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
@@ -531,6 +531,44 @@
     @keyframes chickenBlock {
       0%, 100% { transform: scale(1) rotate(-5deg); }
       50% { transform: scale(1.15) rotate(5deg); }
+    }
+    .chicken.exploding {
+      animation: chickenExplode 0.5s ease-out forwards;
+    }
+    @keyframes chickenExplode {
+      0% { transform: scale(1); opacity: 1; }
+      30% { transform: scale(2); }
+      100% { transform: scale(0); opacity: 0; }
+    }
+    .explosion-ring {
+      position: absolute;
+      border: 4px solid #FF6B6B;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: explosionExpand 0.6s ease-out forwards;
+    }
+    @keyframes explosionExpand {
+      0% { transform: scale(0); opacity: 1; border-width: 8px; }
+      100% { transform: scale(1); opacity: 0; border-width: 1px; }
+    }
+    .reverse-points {
+      position: absolute;
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      pointer-events: none;
+      animation: reverseFloat 1s ease-out forwards;
+    }
+    .reverse-points.positive {
+      color: #4ECDC4;
+    }
+    .reverse-points.negative {
+      color: #FF6B6B;
+    }
+    @keyframes reverseFloat {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      50% { transform: translateY(-20px) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-40px) scale(0.8); }
     }
   </style>
 </head>
@@ -593,6 +631,8 @@
 
     const creatureEmojis = ['🐀', '🐁', '🐿️', '🦝', '🐒', '🦊'];
     const creatures = [];
+    let chickenInterval;
+    let chickens = [];
 
     function loadHighScores() {
       const stored = JSON.parse(localStorage.getItem('clickBoxHighScores')) || [];
@@ -1173,6 +1213,151 @@
       requestAnimationFrame(moveCreature);
     }
 
+    function createChicken() {
+      if (!isPlaying) return;
+
+      const chicken = document.createElement('div');
+      chicken.className = 'chicken';
+      chicken.textContent = '🐔';
+
+      // Random starting position
+      const x = Math.floor(Math.random() * (window.innerWidth - 100)) + 50;
+      const y = Math.floor(Math.random() * (window.innerHeight - 300)) + 150;
+
+      chicken.style.left = x + 'px';
+      chicken.style.top = y + 'px';
+
+      // Movement variables
+      let chickenX = x;
+      let chickenY = y;
+      let dx = (Math.random() - 0.5) * 3;
+      let dy = (Math.random() - 0.5) * 2;
+
+      const chickenData = {
+        element: chicken,
+        x: chickenX,
+        y: chickenY
+      };
+      chickens.push(chickenData);
+
+      // Click handler - chicken explodes and destroys nearby boxes
+      chicken.addEventListener('click', function() {
+        if (this.classList.contains('exploding')) return;
+        this.classList.add('exploding');
+
+        const chickenRect = this.getBoundingClientRect();
+        const chickenCenterX = chickenRect.left + chickenRect.width / 2;
+        const chickenCenterY = chickenRect.top + chickenRect.height / 2;
+        const explosionRadius = 200; // pixels
+
+        // Create explosion visual ring
+        const ring = document.createElement('div');
+        ring.className = 'explosion-ring';
+        ring.style.width = (explosionRadius * 2) + 'px';
+        ring.style.height = (explosionRadius * 2) + 'px';
+        ring.style.left = (chickenCenterX - explosionRadius) + 'px';
+        ring.style.top = (chickenCenterY - explosionRadius) + 'px';
+        document.body.appendChild(ring);
+        setTimeout(() => ring.remove(), 600);
+
+        // Find and destroy nearby boxes with reversed scoring
+        const allBoxes = document.querySelectorAll('.click-box:not(.clicked)');
+        allBoxes.forEach(box => {
+          const boxRect = box.getBoundingClientRect();
+          const boxCenterX = boxRect.left + boxRect.width / 2;
+          const boxCenterY = boxRect.top + boxRect.height / 2;
+
+          // Calculate distance from explosion center
+          const distance = Math.sqrt(
+            Math.pow(boxCenterX - chickenCenterX, 2) +
+            Math.pow(boxCenterY - chickenCenterY, 2)
+          );
+
+          if (distance <= explosionRadius) {
+            // Get the box's point value
+            const boxText = box.textContent.trim();
+            const pointMatch = boxText.match(/([+-]?\d+)/);
+            if (pointMatch) {
+              const originalPoints = parseInt(pointMatch[1]);
+              // Reverse the points: + becomes -, - becomes +
+              const reversedPoints = -originalPoints;
+
+              // Apply reversed points
+              score += reversedPoints;
+              updateScoreDisplay();
+
+              // Show reversed points indicator
+              const pointsDisplay = document.createElement('div');
+              pointsDisplay.className = 'reverse-points ' + (reversedPoints >= 0 ? 'positive' : 'negative');
+              pointsDisplay.textContent = (reversedPoints >= 0 ? '+' : '') + reversedPoints;
+              pointsDisplay.style.left = boxCenterX + 'px';
+              pointsDisplay.style.top = boxCenterY + 'px';
+              document.body.appendChild(pointsDisplay);
+              setTimeout(() => pointsDisplay.remove(), 1000);
+
+              // Mark box as clicked and remove
+              box.classList.add('clicked');
+              setTimeout(() => box.remove(), 300);
+            }
+          }
+        });
+
+        // Check for game over
+        if (score <= 0) {
+          endGame();
+        }
+
+        // Remove chicken after animation
+        setTimeout(() => {
+          this.remove();
+          const idx = chickens.findIndex(c => c.element === this);
+          if (idx > -1) chickens.splice(idx, 1);
+        }, 500);
+      });
+
+      document.body.appendChild(chicken);
+
+      // Chicken movement - floating around
+      const moveChicken = () => {
+        if (!chicken.parentNode || !isPlaying || chicken.classList.contains('exploding')) {
+          const idx = chickens.findIndex(c => c.element === chicken);
+          if (idx > -1) chickens.splice(idx, 1);
+          return;
+        }
+
+        chickenX += dx;
+        chickenY += dy;
+
+        // Bounce off walls
+        if (chickenX <= 50 || chickenX >= window.innerWidth - 100) {
+          dx = -dx;
+          chickenX = Math.max(50, Math.min(chickenX, window.innerWidth - 100));
+        }
+        if (chickenY <= 150 || chickenY >= window.innerHeight - 150) {
+          dy = -dy;
+          chickenY = Math.max(150, Math.min(chickenY, window.innerHeight - 150));
+        }
+
+        chicken.style.left = chickenX + 'px';
+        chicken.style.top = chickenY + 'px';
+        chickenData.x = chickenX;
+        chickenData.y = chickenY;
+
+        requestAnimationFrame(moveChicken);
+      };
+
+      requestAnimationFrame(moveChicken);
+
+      // Chicken disappears after some time if not clicked
+      setTimeout(() => {
+        if (chicken.parentNode && !chicken.classList.contains('exploding')) {
+          chicken.remove();
+          const idx = chickens.findIndex(c => c.element === chicken);
+          if (idx > -1) chickens.splice(idx, 1);
+        }
+      }, 8000);
+    }
+
     function startGame() {
       score = 10;
       timeLeft = 30;
@@ -1184,8 +1369,12 @@
 
       document.querySelectorAll('.click-box').forEach(box => box.remove());
       document.querySelectorAll('.creature').forEach(c => c.remove());
+      document.querySelectorAll('.chicken').forEach(c => c.remove());
       document.querySelectorAll('.stolen-points').forEach(s => s.remove());
+      document.querySelectorAll('.reverse-points').forEach(r => r.remove());
+      document.querySelectorAll('.explosion-ring').forEach(e => e.remove());
       creatures.length = 0;
+      chickens.length = 0;
 
       gameInterval = setInterval(() => {
         timeLeft--;
@@ -1200,7 +1389,10 @@
       spawnInterval = setInterval(createBox, 400);
       obstacleInterval = setInterval(createObstacle, 1200);
       creatureInterval = setInterval(createCreature, 3000);
+      chickenInterval = setInterval(createChicken, 5000);
       createBox();
+      // Spawn first chicken after a short delay
+      setTimeout(createChicken, 2000);
     }
 
     function createConfetti() {
@@ -1259,11 +1451,16 @@
       clearInterval(spawnInterval);
       clearInterval(obstacleInterval);
       clearInterval(creatureInterval);
+      clearInterval(chickenInterval);
 
       document.querySelectorAll('.click-box').forEach(box => box.remove());
       document.querySelectorAll('.creature').forEach(c => c.remove());
+      document.querySelectorAll('.chicken').forEach(c => c.remove());
       document.querySelectorAll('.stolen-points').forEach(s => s.remove());
+      document.querySelectorAll('.reverse-points').forEach(r => r.remove());
+      document.querySelectorAll('.explosion-ring').forEach(e => e.remove());
       creatures.length = 0;
+      chickens.length = 0;
 
       const isNewHighScore = score > getHighScore();
 
