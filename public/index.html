@@ -18,9 +18,32 @@
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 150;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    #header h2 {
+      font-size: 24px;
+      font-weight: bold;
+      background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 2px;
+    }
     #game-ui {
       position: fixed;
-      top: 20px;
+      top: 80px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
@@ -205,6 +228,10 @@
   </style>
 </head>
 <body>
+  <header id="header">
+    <h2>CLICK BOX</h2>
+  </header>
+
   <div id="game-ui">
     <div class="stat">
       <div class="stat-label">Score</div>
