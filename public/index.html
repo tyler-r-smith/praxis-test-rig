@@ -421,7 +421,7 @@
         score--;
         timeDisplay.textContent = timeLeft;
         updateScoreDisplay();
-        if (timeLeft <= 0) {
+        if (timeLeft <= 0 || score <= 0) {
           endGame();
         }
       }, 1000);
