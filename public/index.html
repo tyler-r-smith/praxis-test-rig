@@ -152,14 +152,55 @@
       color: #4ECDC4;
       font-weight: bold;
     }
+    .name-input-container {
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .name-input-container label {
+      font-size: 16px;
+      opacity: 0.8;
+    }
+    #player-name {
+      padding: 12px 20px;
+      font-size: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      text-align: center;
+      width: 200px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #player-name:focus {
+      border-color: #4ECDC4;
+    }
+    #player-name::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .high-scores .score-name {
+      color: #FFD700;
+    }
+    .high-scores .score-value {
+      color: #4ECDC4;
+      float: right;
+    }
     .high-scores-animate li {
       animation: slideIn 0.3s ease-out backwards;
     }
     .high-scores-animate li:nth-child(1) { animation-delay: 0.1s; }
-    .high-scores-animate li:nth-child(2) { animation-delay: 0.2s; }
-    .high-scores-animate li:nth-child(3) { animation-delay: 0.3s; }
-    .high-scores-animate li:nth-child(4) { animation-delay: 0.4s; }
-    .high-scores-animate li:nth-child(5) { animation-delay: 0.5s; }
+    .high-scores-animate li:nth-child(2) { animation-delay: 0.15s; }
+    .high-scores-animate li:nth-child(3) { animation-delay: 0.2s; }
+    .high-scores-animate li:nth-child(4) { animation-delay: 0.25s; }
+    .high-scores-animate li:nth-child(5) { animation-delay: 0.3s; }
+    .high-scores-animate li:nth-child(6) { animation-delay: 0.35s; }
+    .high-scores-animate li:nth-child(7) { animation-delay: 0.4s; }
+    .high-scores-animate li:nth-child(8) { animation-delay: 0.45s; }
+    .high-scores-animate li:nth-child(9) { animation-delay: 0.5s; }
+    .high-scores-animate li:nth-child(10) { animation-delay: 0.55s; }
     @keyframes slideIn {
       from { transform: translateX(-20px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
@@ -263,6 +304,10 @@
     <p class="subtitle">Your Score</p>
     <div id="final-score">0</div>
     <div id="new-high-score" class="new-high-score" style="display: none;">New High Score!</div>
+    <div class="name-input-container">
+      <label for="player-name">Enter your name:</label>
+      <input type="text" id="player-name" placeholder="Anonymous" maxlength="15">
+    </div>
     <button id="restart-btn">Play Again</button>
     <div id="end-high-scores" class="high-scores high-scores-animate"></div>
   </div>
@@ -279,16 +324,28 @@
     let gameInterval;
     let spawnInterval;
     let isPlaying = false;
-    let highScores = JSON.parse(localStorage.getItem('clickBoxHighScores')) || [];
+    let highScores = loadHighScores();
 
-    function getHighScore() {
-      return highScores.length > 0 ? highScores[0] : 0;
+    function loadHighScores() {
+      const stored = JSON.parse(localStorage.getItem('clickBoxHighScores')) || [];
+      // Migrate old format (numbers) to new format (objects with name and score)
+      return stored.map(entry => {
+        if (typeof entry === 'number') {
+          return { name: 'Anonymous', score: entry };
+        }
+        return entry;
+      });
     }
 
-    function updateHighScores(newScore) {
-      highScores.push(newScore);
-      highScores.sort((a, b) => b - a);
-      highScores = highScores.slice(0, 5);
+    function getHighScore() {
+      return highScores.length > 0 ? highScores[0].score : 0;
+    }
+
+    function updateHighScores(newScore, playerName) {
+      const name = playerName && playerName.trim() ? playerName.trim() : 'Anonymous';
+      highScores.push({ name: name, score: newScore });
+      highScores.sort((a, b) => b.score - a.score);
+      highScores = highScores.slice(0, 10);
       localStorage.setItem('clickBoxHighScores', JSON.stringify(highScores));
     }
 
@@ -300,12 +357,18 @@
       }
       container.style.display = 'block';
       let html = '<h3>High Scores</h3><ol>';
-      highScores.forEach((s, i) => {
-        const isCurrent = currentScore !== null && s === currentScore;
-        html += '<li class="' + (isCurrent ? 'current' : '') + '">#' + (i + 1) + ': ' + s + ' points</li>';
+      highScores.forEach((entry, i) => {
+        const isCurrent = currentScore !== null && entry.score === currentScore;
+        html += '<li class="' + (isCurrent ? 'current' : '') + '">#' + (i + 1) + ': <span class="score-name">' + escapeHtml(entry.name) + '</span> <span class="score-value">' + entry.score + '</span></li>';
       });
       html += '</ol>';
       container.innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     const scoreDisplay = document.getElementById('score-value');
@@ -438,16 +501,31 @@
       document.querySelectorAll('.click-box').forEach(box => box.remove());
 
       const isNewHighScore = score > getHighScore();
-      updateHighScores(score);
 
       finalScoreDisplay.textContent = score;
       document.getElementById('new-high-score').style.display = isNewHighScore ? 'block' : 'none';
-      renderHighScores('end-high-scores', score);
+      document.getElementById('player-name').value = '';
       gameOverScreen.style.display = 'flex';
+      document.getElementById('player-name').focus();
+
+      // Render high scores without the current score yet (will be added on restart)
+      renderHighScores('end-high-scores');
+    }
+
+    function saveAndRestart() {
+      const playerName = document.getElementById('player-name').value;
+      const currentScore = parseInt(finalScoreDisplay.textContent);
+      updateHighScores(currentScore, playerName);
+      startGame();
     }
 
     document.getElementById('start-btn').addEventListener('click', startGame);
-    document.getElementById('restart-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', saveAndRestart);
+    document.getElementById('player-name').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        saveAndRestart();
+      }
+    });
 
     // Initialize high scores on start screen
     renderHighScores('start-high-scores');
