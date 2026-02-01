@@ -20,6 +20,11 @@
     .color-block {
       position: absolute;
       border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .color-block:hover {
+      transform: scale(1.05);
     }
   </style>
 </head>
@@ -50,6 +55,10 @@
         block.style.left = x + 'px';
         block.style.top = y + 'px';
         block.style.backgroundColor = randomColor();
+
+        block.addEventListener('click', function() {
+          this.style.backgroundColor = randomColor();
+        });
 
         document.body.appendChild(block);
       }
