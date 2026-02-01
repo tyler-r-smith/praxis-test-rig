@@ -496,7 +496,10 @@
         }
       }
 
-      const points = 5;
+      // Calculate points inversely proportional to box area
+      // Smaller boxes = more points, larger boxes = fewer points
+      const area = width * height;
+      const points = Math.max(1, Math.round(15000 / area));
 
       const maxX = window.innerWidth - width - 20;
       const maxY = window.innerHeight - height - 100;
@@ -523,10 +526,13 @@
         box.classList.add('bonus-box');
       }
 
+      // Store points on the element for the click handler
+      box.dataset.points = points;
+
       box.addEventListener('click', function() {
         if (this.classList.contains('clicked')) return;
         this.classList.add('clicked');
-        score += 5;
+        score += parseInt(this.dataset.points);
         updateScoreDisplay();
         setTimeout(() => this.remove(), 300);
         createBox();
